@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
   <title>TonyStory</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -151,6 +152,25 @@
     }
     .month-label { font-size: 1.1rem; font-weight: 600; letter-spacing: 0.02em; color: #1a2d3f; }
     .month-count { color: #8aacbf; font-size: 0.8rem; }
+    .month-age {
+      display: block;
+      font-size: 0.75rem;
+      color: #8aacbf;
+      margin-top: -6px;
+      margin-bottom: 10px;
+    }
+    .milestone-badge {
+      font-size: 0.72rem;
+      background: #dbeeff;
+      color: #1a4a7a;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+    .month-bucket.has-milestone::before {
+      background: #3a7abd;
+      border-color: #3a7abd;
+    }
     /* Year label in the left gutter */
     .year-marker {
       position: absolute;
@@ -318,8 +338,50 @@
       months: [],
       renderedMonths: 0,
       loading: false,
-      error: null
+      error: null,
+      config: null  // { dob: Date, milestones: Map<string, string> } or null
     };
+
+    // === Czech helpers ===
+
+    function pluralCz(n, one, few, many) {
+      if (n === 1) return `${n} ${one}`;
+      if (n >= 2 && n <= 4) return `${n} ${few}`;
+      return `${n} ${many}`;
+    }
+
+    function pluralCzFotek(n) {
+      return pluralCz(n, 'fotka', 'fotky', 'fotek');
+    }
+
+    function formatAge(dob, today) {
+      const totalDays = Math.floor((today - dob) / 86400000);
+      if (totalDays < 0) return null;
+
+      let years = today.getFullYear() - dob.getFullYear();
+      let months = today.getMonth() - dob.getMonth();
+      if (today.getDate() < dob.getDate()) months--;
+      if (months < 0) { years--; months += 12; }
+
+      if (today.getDate() === dob.getDate() && today.getMonth() === dob.getMonth() && years > 0) {
+        return `Tonymu je dnes ${pluralCz(years, 'rok', 'roky', 'let')}!`;
+      }
+      if (totalDays < 30) return 'Tonymu je méně než měsíc';
+      if (years === 0) return `Tonymu je ${pluralCz(months, 'měsíc', 'měsíce', 'měsíců')}`;
+      if (months === 0) return `Tonymu je ${pluralCz(years, 'rok', 'roky', 'let')}`;
+      return `Tonymu je ${pluralCz(years, 'rok', 'roky', 'let')} a ${pluralCz(months, 'měsíc', 'měsíce', 'měsíců')}`;
+    }
+
+    function formatMonthAge(bucketYear, bucketMonth, dob) {
+      const ageMonths = (bucketYear - dob.getFullYear()) * 12 + (bucketMonth - dob.getMonth());
+      if (ageMonths < 0) return null;
+      if (ageMonths === 0) return 'novorozenec';
+      const years = Math.floor(ageMonths / 12);
+      const months = ageMonths % 12;
+      if (years === 0) return pluralCz(months, 'měsíc', 'měsíce', 'měsíců');
+      if (months === 0) return pluralCz(years, 'rok', 'roky', 'let');
+      return `${pluralCz(years, 'rok', 'roky', 'let')} a ${pluralCz(months, 'měsíc', 'měsíce', 'měsíců')}`;
+    }
 
     // === Render ===
 
@@ -329,7 +391,7 @@
         app.innerHTML = `
           <div id="login-screen">
             <h1>TonyStory</h1>
-            <p>A little boy growing up, one month at a time</p>
+            <p>Jak Tony roste, měsíc po měsíci</p>
             <button id="btn-signin">
               <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -337,7 +399,7 @@
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
               </svg>
-              Sign in with Google
+              Přihlásit se přes Google
             </button>
             ${state.error ? `<p class="error-msg">${state.error}</p>` : ''}
           </div>`;
@@ -346,7 +408,7 @@
         app.innerHTML = `
           <div id="loading-screen">
             <div class="spinner"></div>
-            <p id="loading-msg">Fetching photos…</p>
+            <p id="loading-msg">Načítám fotky…</p>
           </div>`;
       } else {
         app.innerHTML = buildHeader() + `<div id="timeline-screen">${buildTimeline()}</div>`;
@@ -365,22 +427,29 @@
     function buildHeader() {
       const total = state.photos.length;
       let meta = '';
-      if (total > 0) {
+      if (state.config && state.config.dob) {
+        const ageStr = formatAge(state.config.dob, new Date());
+        if (ageStr) {
+          meta = total > 0 ? `${ageStr} · ${pluralCzFotek(total)}` : ageStr;
+        } else if (total > 0) {
+          meta = pluralCzFotek(total);
+        }
+      } else if (total > 0) {
         const oldest = state.photos[state.photos.length - 1].date;
         const newest = state.photos[0].date;
-        const fmt = d => d.toLocaleString('default', { month: 'short', year: 'numeric' });
-        meta = `${total} photos · ${fmt(oldest)} – ${fmt(newest)}`;
+        const fmt = d => d.toLocaleString('cs-CZ', { month: 'short', year: 'numeric' });
+        meta = `${pluralCzFotek(total)} · ${fmt(oldest)} – ${fmt(newest)}`;
       }
       const banner = state.error ? `
         <div id="error-banner">
           <span>${escapeHtml(state.error)}</span>
-          <a id="btn-retry-signout">Sign out and retry</a>
+          <a id="btn-retry-signout">Odhlásit se a zkusit znovu</a>
         </div>` : '';
       return `
         <header id="site-header">
           <span id="header-title">TonyStory</span>
           <span id="header-meta">${meta}</span>
-          <button id="btn-signout">Sign out</button>
+          <button id="btn-signout">Odhlásit se</button>
         </header>
         ${banner}`;
     }
@@ -403,7 +472,7 @@
           state.error = null;
           sessionStorage.setItem('gd_token', response.access_token);
           render();
-          loadPhotos();
+          loadConfig().then(() => loadPhotos());
         }
       });
     }
@@ -466,7 +535,7 @@
           fetched += photos.length;
 
           const msg = document.getElementById('loading-msg');
-          if (msg) msg.textContent = `Fetching photos… (${fetched} found)`;
+          if (msg) msg.textContent = `Načítám fotky… (nalezeno ${fetched})`;
 
           pageToken = data.nextPageToken;
         } while (pageToken);
@@ -495,19 +564,65 @@
     function groupByMonth(photos) {
       const map = new Map();
       for (const photo of photos) {
-        const label = photo.date.toLocaleString('default', { month: 'long', year: 'numeric' });
-        if (!map.has(label)) map.set(label, []);
-        map.get(label).push(photo);
+        const label = photo.date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        if (!map.has(label)) {
+          map.set(label, {
+            photos: [],
+            czechMonth: photo.date.toLocaleString('cs-CZ', { month: 'long' }),
+            year: photo.date.getFullYear(),
+            month: photo.date.getMonth()
+          });
+        }
+        map.get(label).photos.push(photo);
       }
-      return Array.from(map.entries()).map(([label, photos]) => ({ label, photos }));
+      return Array.from(map.entries()).map(([label, data]) => ({
+        label,
+        czechMonth: data.czechMonth,
+        year: data.year,
+        month: data.month,
+        photos: data.photos
+      }));
     }
 
     function handleAuthError() {
       state.token = null;
       state.loading = false;
-      state.error = 'Session expired. Please sign in again.';
+      state.error = 'Relace vypršela. Přihlas se znovu.';
       sessionStorage.removeItem('gd_token');
       render();
+    }
+
+    // === Config ===
+
+    async function loadConfig() {
+      try {
+        const params = new URLSearchParams({
+          q: `name = 'tonystory-config.json' and '${CONFIG.FOLDER_ID}' in parents and trashed=false`,
+          fields: 'files(id)',
+          pageSize: '1'
+        });
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, {
+          headers: { Authorization: `Bearer ${state.token}` }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.files || data.files.length === 0) return;
+        const fileId = data.files[0].id;
+        const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+          headers: { Authorization: `Bearer ${state.token}` }
+        });
+        if (!fileRes.ok) return;
+        const json = await fileRes.json();
+        if (!json.dob) return;
+        const dob = new Date(json.dob);
+        if (isNaN(dob.getTime())) return;
+        state.config = {
+          dob,
+          milestones: new Map((json.milestones || []).map(m => [m.month, m.label]))
+        };
+      } catch {
+        // config is optional — silently skip on any error
+      }
     }
 
     // === Timeline ===
@@ -517,17 +632,31 @@
     function buildTimeline() {
       if (state.months.length === 0) {
         return `<div id="empty-state">
-          <h2>No photos found in this folder</h2>
-          <p>Make sure the folder ID in CONFIG is correct and contains images.</p>
+          <h2>V této složce nejsou žádné fotky</h2>
+          <p>Zkontroluj FOLDER_ID v konfiguraci.</p>
         </div>`;
       }
       return `<div id="months-container"></div><div id="sentinel"></div>`;
     }
 
     function renderMonthBucket(month, isYearStart) {
-      const year = month.label.split(' ').pop();
-      const monthName = month.label.split(' ').slice(0, -1).join(' ');
-      const yearMarker = isYearStart ? `<div class="year-marker">${year}</div>` : '';
+      const yearMarker = isYearStart ? `<div class="year-marker">${month.year}</div>` : '';
+
+      // Feature 1: age below month label
+      let ageLabel = '';
+      if (state.config && state.config.dob) {
+        const age = formatMonthAge(month.year, month.month, state.config.dob);
+        if (age) ageLabel = `<span class="month-age">${age}</span>`;
+      }
+
+      // Feature 5: milestone badge
+      const milestoneText = state.config && state.config.milestones.has(month.label)
+        ? state.config.milestones.get(month.label)
+        : null;
+      const milestoneBadge = milestoneText
+        ? `<span class="milestone-badge">${escapeHtml(milestoneText)}</span>`
+        : '';
+
       const items = month.photos.map((photo, idx) => `
         <div class="photo-item" data-photo-id="${photo.id}" data-month-label="${month.label}" data-month-idx="${idx}">
           <img
@@ -539,12 +668,14 @@
         </div>`).join('');
 
       return `
-        <div class="month-bucket" data-month="${month.label}">
+        <div class="month-bucket${milestoneText ? ' has-milestone' : ''}" data-month="${month.label}">
           ${yearMarker}
           <div class="month-header">
-            <span class="month-label">${monthName}</span>
-            <span class="month-count">${month.photos.length} photo${month.photos.length !== 1 ? 's' : ''}</span>
+            <span class="month-label">${escapeHtml(month.czechMonth)}</span>
+            ${milestoneBadge}
+            <span class="month-count">${pluralCzFotek(month.photos.length)}</span>
           </div>
+          ${ageLabel}
           <div class="photo-grid">${items}</div>
         </div>`;
     }
@@ -559,8 +690,8 @@
       const end = Math.min(state.renderedMonths + MONTHS_PER_BATCH, state.months.length);
       for (let i = state.renderedMonths; i < end; i++) {
         const month = state.months[i];
-        const prevYear = i > 0 ? state.months[i - 1].label.split(' ').pop() : null;
-        const isYearStart = i === 0 || month.label.split(' ').pop() !== prevYear;
+        const prevYear = i > 0 ? state.months[i - 1].year : null;
+        const isYearStart = i === 0 || month.year !== prevYear;
         container.insertAdjacentHTML('beforeend', renderMonthBucket(month, isYearStart));
       }
       state.renderedMonths = end;
@@ -668,7 +799,7 @@
       }
       document.getElementById('lightbox-name').textContent = photo.name;
       document.getElementById('lightbox-date').textContent =
-        photo.date.toLocaleString('default', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        photo.date.toLocaleString('cs-CZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       document.getElementById('lightbox-prev').style.visibility = idx > 0 ? 'visible' : 'hidden';
       document.getElementById('lightbox-next').style.visibility = idx < lightboxMonthPhotos.length - 1 ? 'visible' : 'hidden';
     }
@@ -699,7 +830,7 @@
           clearInterval(waitForGSI);
           initAuth();
           render();
-          if (state.token) loadPhotos();
+          if (state.token) loadConfig().then(() => loadPhotos());
         }
       }, 100);
 
