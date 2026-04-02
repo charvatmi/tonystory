@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Photo Timeline</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0f0f0f; color: #f0f0f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+    #app { min-height: 100vh; }
+
+    /* === Login Screen === */
+    #login-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 24px;
+    }
+    #login-screen h1 { font-size: 2rem; font-weight: 300; letter-spacing: 0.05em; }
+    #login-screen p { color: #888; font-size: 0.95rem; }
+    #btn-signin {
+      background: #fff;
+      color: #111;
+      border: none;
+      border-radius: 4px;
+      padding: 12px 28px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: opacity 0.15s;
+    }
+    #btn-signin:hover { opacity: 0.85; }
+    #btn-signin svg { width: 20px; height: 20px; }
+    .error-msg { color: #ff6b6b; font-size: 0.9rem; text-align: center; max-width: 360px; }
+
+    /* === Loading === */
+    #loading-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 20px;
+    }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 3px solid #333;
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-screen p { color: #888; font-size: 0.9rem; }
+
+    /* === Header === */
+    #site-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15,15,15,0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid #222;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    #header-title { font-size: 1.1rem; font-weight: 600; letter-spacing: 0.04em; }
+    #header-meta { color: #888; font-size: 0.85rem; flex: 1; text-align: center; }
+    #btn-signout {
+      background: none;
+      border: 1px solid #444;
+      color: #aaa;
+      border-radius: 4px;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    #btn-signout:hover { border-color: #fff; color: #fff; }
+
+    /* === Error banner === */
+    #error-banner {
+      background: #3d1a1a;
+      border-bottom: 1px solid #7f2020;
+      color: #ffaaaa;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.9rem;
+    }
+    #error-banner a { color: #ff8888; cursor: pointer; text-decoration: underline; }
+
+    /* === Timeline === */
+    #timeline-screen {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+    }
+    .month-bucket { margin-bottom: 48px; }
+    .month-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #222;
+    }
+    .month-label { font-size: 1.4rem; font-weight: 600; }
+    .month-count { color: #666; font-size: 0.9rem; }
+
+    /* === Masonry grid === */
+    .photo-grid {
+      columns: 3;
+      column-gap: 8px;
+    }
+    .photo-item {
+      break-inside: avoid;
+      margin-bottom: 8px;
+      cursor: pointer;
+      overflow: hidden;
+      border-radius: 4px;
+      background: #1a1a1a;
+    }
+    .photo-item img {
+      width: 100%;
+      display: block;
+      transition: filter 0.15s;
+    }
+    .photo-item:hover img { filter: brightness(1.15); }
+    .photo-item img.lazy { opacity: 0; transition: opacity 0.3s, filter 0.15s; }
+    .photo-item img.loaded { opacity: 1; }
+
+    /* === Empty state === */
+    #empty-state {
+      text-align: center;
+      padding: 80px 24px;
+      color: #555;
+    }
+    #empty-state h2 { font-size: 1.4rem; font-weight: 400; margin-bottom: 8px; }
+
+    /* === Sentinel === */
+    #sentinel { height: 1px; }
+
+    /* === Responsive === */
+    @media (max-width: 768px) { .photo-grid { columns: 2; } }
+    @media (max-width: 480px) { .photo-grid { columns: 1; } #header-meta { display: none; } }
+
+    /* === Lightbox === */
+    #lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0,0,0,0.92);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #lightbox.open { display: flex; }
+    #lightbox-backdrop {
+      position: absolute;
+      inset: 0;
+      cursor: zoom-out;
+    }
+    #lightbox-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 90vw;
+      max-height: 90vh;
+      gap: 14px;
+    }
+    #lightbox-img {
+      max-width: 90vw;
+      max-height: 78vh;
+      object-fit: contain;
+      border-radius: 3px;
+      display: block;
+    }
+    #lightbox-info { text-align: center; }
+    #lightbox-name { font-size: 0.95rem; font-weight: 500; }
+    #lightbox-date { font-size: 0.8rem; color: #888; margin-top: 4px; }
+    #lightbox-close {
+      position: fixed;
+      top: 20px; right: 24px;
+      background: none; border: none;
+      color: #fff; font-size: 1.8rem;
+      cursor: pointer; line-height: 1;
+      opacity: 0.7;
+      z-index: 2;
+    }
+    #lightbox-close:hover { opacity: 1; }
+    #lightbox-prev, #lightbox-next {
+      position: fixed;
+      top: 50%; transform: translateY(-50%);
+      background: rgba(255,255,255,0.1);
+      border: none; color: #fff;
+      font-size: 1.6rem; padding: 14px 18px;
+      cursor: pointer; border-radius: 4px;
+      transition: background 0.15s;
+      z-index: 2;
+    }
+    #lightbox-prev { left: 16px; }
+    #lightbox-next { right: 16px; }
+    #lightbox-prev:hover, #lightbox-next:hover { background: rgba(255,255,255,0.2); }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="lightbox" role="dialog" aria-modal="true">
+    <div id="lightbox-backdrop"></div>
+    <button id="lightbox-close" aria-label="Close">&#x2715;</button>
+    <button id="lightbox-prev" aria-label="Previous">&#x2039;</button>
+    <button id="lightbox-next" aria-label="Next">&#x203A;</button>
+    <div id="lightbox-content">
+      <img id="lightbox-img" src="" alt="" />
+      <div id="lightbox-info">
+        <div id="lightbox-name"></div>
+        <div id="lightbox-date"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    const CONFIG = {
+      CLIENT_ID: 'YOUR_GOOGLE_OAUTH_CLIENT_ID',
+      FOLDER_ID: 'YOUR_DRIVE_FOLDER_ID',
+      SCOPES: 'https://www.googleapis.com/auth/drive.readonly'
+    };
+
+    const state = {
+      token: null,
+      photos: [],
+      months: [],
+      renderedMonths: 0,
+      loading: false,
+      error: null
+    };
+
+    // === Render ===
+
+    function render() {
+      const app = document.getElementById('app');
+      if (!state.token) {
+        app.innerHTML = `
+          <div id="login-screen">
+            <h1>Photo Timeline</h1>
+            <p>Sign in to view your photo collection</p>
+            <button id="btn-signin">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              Sign in with Google
+            </button>
+            ${state.error ? `<p class="error-msg">${state.error}</p>` : ''}
+          </div>`;
+        document.getElementById('btn-signin').addEventListener('click', startAuth);
+      } else if (state.loading) {
+        app.innerHTML = `
+          <div id="loading-screen">
+            <div class="spinner"></div>
+            <p id="loading-msg">Fetching photos…</p>
+          </div>`;
+      } else {
+        app.innerHTML = buildHeader() + `<div id="timeline-screen">${buildTimeline()}</div>`;
+        document.getElementById('btn-signout').addEventListener('click', signOut);
+        const retryBtn = document.getElementById('btn-retry-signout');
+        if (retryBtn) retryBtn.addEventListener('click', signOut);
+        if (state.months.length > 0) {
+          appendNextMonths();
+          initSentinelObserver();
+        }
+      }
+    }
+
+    // === Header ===
+
+    function buildHeader() {
+      const total = state.photos.length;
+      let meta = '';
+      if (total > 0) {
+        const oldest = state.photos[state.photos.length - 1].date;
+        const newest = state.photos[0].date;
+        const fmt = d => d.toLocaleString('default', { month: 'short', year: 'numeric' });
+        meta = `${total} photos · ${fmt(oldest)} – ${fmt(newest)}`;
+      }
+      const banner = state.error ? `
+        <div id="error-banner">
+          <span>${escapeHtml(state.error)}</span>
+          <a id="btn-retry-signout">Sign out and retry</a>
+        </div>` : '';
+      return `
+        <header id="site-header">
+          <span id="header-title">Photo Timeline</span>
+          <span id="header-meta">${meta}</span>
+          <button id="btn-signout">Sign out</button>
+        </header>
+        ${banner}`;
+    }
+
+    // === Auth ===
+
+    let tokenClient;
+
+    function initAuth() {
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CONFIG.CLIENT_ID,
+        scope: CONFIG.SCOPES,
+        callback: (response) => {
+          if (response.error) {
+            state.error = 'Sign-in failed: ' + response.error;
+            render();
+            return;
+          }
+          state.token = response.access_token;
+          state.error = null;
+          sessionStorage.setItem('gd_token', response.access_token);
+          render();
+          loadPhotos();
+        }
+      });
+    }
+
+    function startAuth() {
+      tokenClient.requestAccessToken();
+    }
+
+    function signOut() {
+      google.accounts.oauth2.revoke(state.token, () => {});
+      state.token = null;
+      state.photos = [];
+      state.months = [];
+      state.renderedMonths = 0;
+      sessionStorage.removeItem('gd_token');
+      render();
+    }
+
+    // === Drive API ===
+
+    async function loadPhotos() {
+      state.loading = true;
+      state.photos = [];
+      state.error = null;
+      render();
+
+      try {
+        let pageToken = null;
+        let fetched = 0;
+        do {
+          const params = new URLSearchParams({
+            q: `'${CONFIG.FOLDER_ID}' in parents and trashed=false and mimeType contains 'image/'`,
+            fields: 'nextPageToken,files(id,name,mimeType,createdTime,imageMediaMetadata)',
+            pageSize: '100',
+            ...(pageToken ? { pageToken } : {})
+          });
+
+          const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, {
+            headers: { Authorization: `Bearer ${state.token}` }
+          });
+
+          if (res.status === 401) {
+            handleAuthError();
+            return;
+          }
+          if (!res.ok) {
+            throw new Error(`Drive API error: ${res.status}`);
+          }
+
+          const data = await res.json();
+          const photos = (data.files || []).map(f => ({
+            id: f.id,
+            name: f.name,
+            date: parsePhotoDate(f),
+            thumbnailUrl: `https://drive.google.com/thumbnail?id=${f.id}&sz=w400`,
+            fullUrl: `https://drive.google.com/uc?id=${f.id}&export=view`
+          }));
+
+          state.photos.push(...photos);
+          fetched += photos.length;
+
+          const msg = document.getElementById('loading-msg');
+          if (msg) msg.textContent = `Fetching photos… (${fetched} found)`;
+
+          pageToken = data.nextPageToken;
+        } while (pageToken);
+
+        state.photos.sort((a, b) => b.date - a.date);
+        state.months = groupByMonth(state.photos);
+        state.renderedMonths = 0;
+        state.loading = false;
+        render();
+
+      } catch (err) {
+        state.loading = false;
+        state.error = err.message;
+        render();
+      }
+    }
+
+    function parsePhotoDate(file) {
+      if (file.imageMediaMetadata && file.imageMediaMetadata.time) {
+        const d = new Date(file.imageMediaMetadata.time);
+        if (!isNaN(d)) return d;
+      }
+      return new Date(file.createdTime);
+    }
+
+    function groupByMonth(photos) {
+      const map = new Map();
+      for (const photo of photos) {
+        const label = photo.date.toLocaleString('default', { month: 'long', year: 'numeric' });
+        if (!map.has(label)) map.set(label, []);
+        map.get(label).push(photo);
+      }
+      return Array.from(map.entries()).map(([label, photos]) => ({ label, photos }));
+    }
+
+    function handleAuthError() {
+      state.token = null;
+      state.loading = false;
+      state.error = 'Session expired. Please sign in again.';
+      sessionStorage.removeItem('gd_token');
+      render();
+    }
+
+    // === Timeline ===
+
+    const MONTHS_PER_BATCH = 3;
+
+    function buildTimeline() {
+      if (state.months.length === 0) {
+        return `<div id="empty-state">
+          <h2>No photos found in this folder</h2>
+          <p>Make sure the folder ID in CONFIG is correct and contains images.</p>
+        </div>`;
+      }
+      return `<div id="months-container"></div><div id="sentinel"></div>`;
+    }
+
+    function renderMonthBucket(month) {
+      const items = month.photos.map((photo, idx) => `
+        <div class="photo-item" data-photo-id="${photo.id}" data-month-label="${month.label}" data-month-idx="${idx}">
+          <img
+            class="lazy"
+            data-src="${photo.thumbnailUrl}"
+            alt="${escapeHtml(photo.name)}"
+            loading="lazy"
+          />
+        </div>`).join('');
+
+      return `
+        <div class="month-bucket" data-month="${month.label}">
+          <div class="month-header">
+            <span class="month-label">${month.label}</span>
+            <span class="month-count">${month.photos.length} photo${month.photos.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div class="photo-grid">${items}</div>
+        </div>`;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function appendNextMonths() {
+      const container = document.getElementById('months-container');
+      if (!container) return;
+      const end = Math.min(state.renderedMonths + MONTHS_PER_BATCH, state.months.length);
+      for (let i = state.renderedMonths; i < end; i++) {
+        container.insertAdjacentHTML('beforeend', renderMonthBucket(state.months[i]));
+      }
+      state.renderedMonths = end;
+      attachImageObserver();
+      attachPhotoClickHandlers();
+    }
+
+    function initSentinelObserver() {
+      const sentinel = document.getElementById('sentinel');
+      if (!sentinel) return;
+      const obs = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && state.renderedMonths < state.months.length) {
+          appendNextMonths();
+        }
+      }, { rootMargin: '200px' });
+      obs.observe(sentinel);
+    }
+
+    function attachPhotoClickHandlers() {
+      document.querySelectorAll('.photo-item').forEach(item => {
+        if (item.dataset.listenerAttached) return;
+        item.dataset.listenerAttached = 'true';
+        item.addEventListener('click', () => {
+          const photoId = item.dataset.photoId;
+          const monthLabel = item.dataset.monthLabel;
+          const monthIdx = parseInt(item.dataset.monthIdx, 10);
+          openLightbox(photoId, monthLabel, monthIdx);
+        });
+      });
+    }
+
+    // === Lazy image loading ===
+
+    let imageObserver;
+
+    function attachImageObserver() {
+      if (!imageObserver) {
+        imageObserver = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const img = entry.target;
+              if (img.dataset.src) {
+                img.src = img.dataset.src;
+                img.removeAttribute('data-src');
+                img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
+                img.addEventListener('error', () => {
+                  img.classList.add('loaded');
+                  img.style.minHeight = '120px';
+                  img.style.background = '#1e1e1e';
+                }, { once: true });
+                imageObserver.unobserve(img);
+              }
+            }
+          });
+        }, { rootMargin: '300px' });
+      }
+
+      document.querySelectorAll('img.lazy[data-src]').forEach(img => {
+        imageObserver.observe(img);
+      });
+    }
+
+    // === Lightbox ===
+
+    let lightboxMonthPhotos = [];
+    let lightboxCurrentIdx = 0;
+
+    function openLightbox(photoId, monthLabel, monthIdx) {
+      const month = state.months.find(m => m.label === monthLabel);
+      if (!month) return;
+      lightboxMonthPhotos = month.photos;
+      lightboxCurrentIdx = monthIdx;
+      showLightboxPhoto(monthIdx);
+      document.getElementById('lightbox').classList.add('open');
+      document.addEventListener('keydown', lightboxKeyHandler);
+    }
+
+    function showLightboxPhoto(idx) {
+      const photo = lightboxMonthPhotos[idx];
+      if (!photo) return;
+      lightboxCurrentIdx = idx;
+      const img = document.getElementById('lightbox-img');
+      img.src = photo.fullUrl;
+      img.alt = photo.name;
+      document.getElementById('lightbox-name').textContent = photo.name;
+      document.getElementById('lightbox-date').textContent =
+        photo.date.toLocaleString('default', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      document.getElementById('lightbox-prev').style.visibility = idx > 0 ? 'visible' : 'hidden';
+      document.getElementById('lightbox-next').style.visibility = idx < lightboxMonthPhotos.length - 1 ? 'visible' : 'hidden';
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+      document.getElementById('lightbox-img').src = '';
+      document.removeEventListener('keydown', lightboxKeyHandler);
+    }
+
+    function lightboxKeyHandler(e) {
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft' && lightboxCurrentIdx > 0) showLightboxPhoto(lightboxCurrentIdx - 1);
+      if (e.key === 'ArrowRight' && lightboxCurrentIdx < lightboxMonthPhotos.length - 1) showLightboxPhoto(lightboxCurrentIdx + 1);
+    }
+
+    // === Init ===
+
+    window.addEventListener('load', () => {
+      const savedToken = sessionStorage.getItem('gd_token');
+      if (savedToken) {
+        state.token = savedToken;
+      }
+
+      // Wait for GSI library to load then init auth
+      const waitForGSI = setInterval(() => {
+        if (window.google && google.accounts) {
+          clearInterval(waitForGSI);
+          initAuth();
+          render();
+          if (state.token) loadPhotos();
+        }
+      }, 100);
+
+      document.getElementById('lightbox-backdrop').addEventListener('click', closeLightbox);
+      document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+      document.getElementById('lightbox-prev').addEventListener('click', () => {
+        if (lightboxCurrentIdx > 0) showLightboxPhoto(lightboxCurrentIdx - 1);
+      });
+      document.getElementById('lightbox-next').addEventListener('click', () => {
+        if (lightboxCurrentIdx < lightboxMonthPhotos.length - 1) showLightboxPhoto(lightboxCurrentIdx + 1);
+      });
+    });
+  </script>
+</body>
+</html>
