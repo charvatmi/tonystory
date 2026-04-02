@@ -537,7 +537,43 @@ git commit -m "feat: per-month age label and milestone badges on timeline"
 
 ---
 
-### Task 6: Push branch and open PR
+### Task 6: noindex meta tag + robots.txt
+
+**Files:**
+- Modify: `index.html`
+- Create: `robots.txt`
+
+- [ ] **Step 1: Add noindex meta tag to `index.html`**
+
+Find:
+```html
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+```
+
+Add this line immediately after it:
+```html
+  <meta name="robots" content="noindex, nofollow" />
+```
+
+- [ ] **Step 2: Create `robots.txt`**
+
+Create the file `/home/misakch/tonystory/robots.txt` with this exact content:
+
+```
+User-agent: *
+Disallow: /
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add index.html robots.txt
+git commit -m "chore: prevent search engine indexing"
+```
+
+---
+
+### Task 7: Push branch and open PR
 
 - [ ] **Step 1: Push the branch**
 
@@ -548,13 +584,14 @@ git push -u origin feat/age-milestones
 - [ ] **Step 2: Create the PR**
 
 ```bash
-gh pr create --title "feat: age counter, month age labels and milestone badges" --body "$(cat <<'EOF'
+gh pr create --title "feat: age counter, month age labels, milestone badges, noindex" --body "$(cat <<'EOF'
 ## Summary
 - Fetches `tonystory-config.json` from the Drive folder (DOB + milestones) — no personal data in the repo
 - Header shows live Czech age: "Tonymu je 5 měsíců · 42 fotek"
 - Each month bucket shows Tony's age at that month below the label
 - Milestone months get a filled blue dot on the rail and a badge pill next to the month name
 - All visible UI text translated to Czech
+- `robots.txt` and noindex meta tag prevent search engine indexing
 
 ## Test Plan
 - [ ] Sign in → header shows age in Czech
@@ -562,6 +599,7 @@ gh pr create --title "feat: age counter, month age labels and milestone badges" 
 - [ ] Months with milestones in config show blue dot + badge
 - [ ] Months before October 2025 show no age label
 - [ ] Remove `tonystory-config.json` from Drive → all three features silently absent, app works normally
+- [ ] `robots.txt` accessible at `/robots.txt` on the deployed site
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
@@ -580,4 +618,6 @@ EOF
 - [ ] Month buckets: age label below month name
 - [ ] Milestone months: filled blue dot + badge
 - [ ] All visible UI text in Czech
+- [ ] `robots.txt` created with `Disallow: /`
+- [ ] `<meta name="robots" content="noindex, nofollow">` in `<head>`
 - [ ] PR open against `main`
