@@ -563,7 +563,7 @@
     function groupByMonth(photos) {
       const map = new Map();
       for (const photo of photos) {
-        const label = photo.date.toLocaleString('default', { month: 'long', year: 'numeric' });
+        const label = photo.date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
         if (!map.has(label)) {
           map.set(label, {
             photos: [],
