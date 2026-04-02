@@ -151,6 +151,25 @@
     }
     .month-label { font-size: 1.1rem; font-weight: 600; letter-spacing: 0.02em; color: #1a2d3f; }
     .month-count { color: #8aacbf; font-size: 0.8rem; }
+    .month-age {
+      display: block;
+      font-size: 0.75rem;
+      color: #8aacbf;
+      margin-top: -6px;
+      margin-bottom: 10px;
+    }
+    .milestone-badge {
+      font-size: 0.72rem;
+      background: #dbeeff;
+      color: #1a4a7a;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+    .month-bucket.has-milestone::before {
+      background: #3a7abd;
+      border-color: #3a7abd;
+    }
     /* Year label in the left gutter */
     .year-marker {
       position: absolute;
@@ -350,6 +369,17 @@
       if (years === 0) return `Tonymu je ${pluralCz(months, 'měsíc', 'měsíce', 'měsíců')}`;
       if (months === 0) return `Tonymu je ${pluralCz(years, 'rok', 'roky', 'let')}`;
       return `Tonymu je ${pluralCz(years, 'rok', 'roky', 'let')} a ${pluralCz(months, 'měsíc', 'měsíce', 'měsíců')}`;
+    }
+
+    function formatMonthAge(bucketYear, bucketMonth, dob) {
+      const ageMonths = (bucketYear - dob.getFullYear()) * 12 + (bucketMonth - dob.getMonth());
+      if (ageMonths < 0) return null;
+      if (ageMonths === 0) return 'novorozenec';
+      const years = Math.floor(ageMonths / 12);
+      const months = ageMonths % 12;
+      if (years === 0) return pluralCz(months, 'měsíc', 'měsíce', 'měsíců');
+      if (months === 0) return pluralCz(years, 'rok', 'roky', 'let');
+      return `${pluralCz(years, 'rok', 'roky', 'let')} a ${pluralCz(months, 'měsíc', 'měsíce', 'měsíců')}`;
     }
 
     // === Render ===
@@ -610,6 +640,22 @@
 
     function renderMonthBucket(month, isYearStart) {
       const yearMarker = isYearStart ? `<div class="year-marker">${month.year}</div>` : '';
+
+      // Feature 1: age below month label
+      let ageLabel = '';
+      if (state.config && state.config.dob) {
+        const age = formatMonthAge(month.year, month.month, state.config.dob);
+        if (age) ageLabel = `<span class="month-age">${age}</span>`;
+      }
+
+      // Feature 5: milestone badge
+      const milestoneText = state.config && state.config.milestones.has(month.label)
+        ? state.config.milestones.get(month.label)
+        : null;
+      const milestoneBadge = milestoneText
+        ? `<span class="milestone-badge">${escapeHtml(milestoneText)}</span>`
+        : '';
+
       const items = month.photos.map((photo, idx) => `
         <div class="photo-item" data-photo-id="${photo.id}" data-month-label="${month.label}" data-month-idx="${idx}">
           <img
@@ -621,12 +667,14 @@
         </div>`).join('');
 
       return `
-        <div class="month-bucket" data-month="${month.label}">
+        <div class="month-bucket${milestoneText ? ' has-milestone' : ''}" data-month="${month.label}">
           ${yearMarker}
           <div class="month-header">
             <span class="month-label">${escapeHtml(month.czechMonth)}</span>
+            ${milestoneBadge}
             <span class="month-count">${pluralCzFotek(month.photos.length)}</span>
           </div>
+          ${ageLabel}
           <div class="photo-grid">${items}</div>
         </div>`;
     }
