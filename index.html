@@ -532,8 +532,11 @@
         });
         if (!fileRes.ok) return;
         const json = await fileRes.json();
+        if (!json.dob) return;
+        const dob = new Date(json.dob);
+        if (isNaN(dob.getTime())) return;
         state.config = {
-          dob: new Date(json.dob),
+          dob,
           milestones: new Map((json.milestones || []).map(m => [m.month, m.label]))
         };
       } catch {
