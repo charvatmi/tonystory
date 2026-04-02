@@ -497,10 +497,23 @@
       const map = new Map();
       for (const photo of photos) {
         const label = photo.date.toLocaleString('default', { month: 'long', year: 'numeric' });
-        if (!map.has(label)) map.set(label, []);
-        map.get(label).push(photo);
+        if (!map.has(label)) {
+          map.set(label, {
+            photos: [],
+            czechMonth: photo.date.toLocaleString('cs-CZ', { month: 'long' }),
+            year: photo.date.getFullYear(),
+            month: photo.date.getMonth()
+          });
+        }
+        map.get(label).photos.push(photo);
       }
-      return Array.from(map.entries()).map(([label, photos]) => ({ label, photos }));
+      return Array.from(map.entries()).map(([label, data]) => ({
+        label,
+        czechMonth: data.czechMonth,
+        year: data.year,
+        month: data.month,
+        photos: data.photos
+      }));
     }
 
     function handleAuthError() {
@@ -559,9 +572,7 @@
     }
 
     function renderMonthBucket(month, isYearStart) {
-      const year = month.label.split(' ').pop();
-      const monthName = month.label.split(' ').slice(0, -1).join(' ');
-      const yearMarker = isYearStart ? `<div class="year-marker">${year}</div>` : '';
+      const yearMarker = isYearStart ? `<div class="year-marker">${month.year}</div>` : '';
       const items = month.photos.map((photo, idx) => `
         <div class="photo-item" data-photo-id="${photo.id}" data-month-label="${month.label}" data-month-idx="${idx}">
           <img
@@ -576,7 +587,7 @@
         <div class="month-bucket" data-month="${month.label}">
           ${yearMarker}
           <div class="month-header">
-            <span class="month-label">${monthName}</span>
+            <span class="month-label">${month.czechMonth}</span>
             <span class="month-count">${month.photos.length} photo${month.photos.length !== 1 ? 's' : ''}</span>
           </div>
           <div class="photo-grid">${items}</div>
@@ -593,8 +604,8 @@
       const end = Math.min(state.renderedMonths + MONTHS_PER_BATCH, state.months.length);
       for (let i = state.renderedMonths; i < end; i++) {
         const month = state.months[i];
-        const prevYear = i > 0 ? state.months[i - 1].label.split(' ').pop() : null;
-        const isYearStart = i === 0 || month.label.split(' ').pop() !== prevYear;
+        const prevYear = i > 0 ? state.months[i - 1].year : null;
+        const isYearStart = i === 0 || month.year !== prevYear;
         container.insertAdjacentHTML('beforeend', renderMonthBucket(month, isYearStart));
       }
       state.renderedMonths = end;
