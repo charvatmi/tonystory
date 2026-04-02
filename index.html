@@ -318,7 +318,8 @@
       months: [],
       renderedMonths: 0,
       loading: false,
-      error: null
+      error: null,
+      config: null  // { dob: Date, milestones: Map<string, string> } or null
     };
 
     // === Render ===
@@ -403,7 +404,7 @@
           state.error = null;
           sessionStorage.setItem('gd_token', response.access_token);
           render();
-          loadPhotos();
+          loadConfig().then(() => loadPhotos());
         }
       });
     }
@@ -508,6 +509,36 @@
       state.error = 'Session expired. Please sign in again.';
       sessionStorage.removeItem('gd_token');
       render();
+    }
+
+    // === Config ===
+
+    async function loadConfig() {
+      try {
+        const params = new URLSearchParams({
+          q: `name = 'tonystory-config.json' and '${CONFIG.FOLDER_ID}' in parents and trashed=false`,
+          fields: 'files(id)',
+          pageSize: '1'
+        });
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, {
+          headers: { Authorization: `Bearer ${state.token}` }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.files || data.files.length === 0) return;
+        const fileId = data.files[0].id;
+        const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+          headers: { Authorization: `Bearer ${state.token}` }
+        });
+        if (!fileRes.ok) return;
+        const json = await fileRes.json();
+        state.config = {
+          dob: new Date(json.dob),
+          milestones: new Map((json.milestones || []).map(m => [m.month, m.label]))
+        };
+      } catch {
+        // config is optional — silently skip on any error
+      }
     }
 
     // === Timeline ===
@@ -699,7 +730,7 @@
           clearInterval(waitForGSI);
           initAuth();
           render();
-          if (state.token) loadPhotos();
+          if (state.token) loadConfig().then(() => loadPhotos());
         }
       }, 100);
 
