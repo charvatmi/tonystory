@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Photo Timeline</title>
+  <title>TonyStory</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0f0f0f; color: #f0f0f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+    body { background: #e8f2fb; color: #1a2d3f; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
     #app { min-height: 100vh; }
 
     /* === Login Screen === */
@@ -18,11 +18,11 @@
       min-height: 100vh;
       gap: 24px;
     }
-    #login-screen h1 { font-size: 2rem; font-weight: 300; letter-spacing: 0.05em; }
-    #login-screen p { color: #888; font-size: 0.95rem; }
+    #login-screen h1 { font-size: 2.4rem; font-weight: 300; letter-spacing: 0.05em; color: #1a2d3f; }
+    #login-screen p { color: #6b8faa; font-size: 0.95rem; }
     #btn-signin {
-      background: #fff;
-      color: #111;
+      background: #1a2d3f;
+      color: #e8f2fb;
       border: none;
       border-radius: 4px;
       padding: 12px 28px;
@@ -36,7 +36,7 @@
     }
     #btn-signin:hover { opacity: 0.85; }
     #btn-signin svg { width: 20px; height: 20px; }
-    .error-msg { color: #ff6b6b; font-size: 0.9rem; text-align: center; max-width: 360px; }
+    .error-msg { color: #c0392b; font-size: 0.9rem; text-align: center; max-width: 360px; }
 
     /* === Loading === */
     #loading-screen {
@@ -49,34 +49,34 @@
     }
     .spinner {
       width: 48px; height: 48px;
-      border: 3px solid #333;
-      border-top-color: #fff;
+      border: 3px solid #c4d8ea;
+      border-top-color: #3a7abd;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #loading-screen p { color: #888; font-size: 0.9rem; }
+    #loading-screen p { color: #6b8faa; font-size: 0.9rem; }
 
     /* === Header === */
     #site-header {
       position: sticky;
       top: 0;
       z-index: 100;
-      background: rgba(15,15,15,0.92);
+      background: rgba(232,242,251,0.93);
       backdrop-filter: blur(8px);
-      border-bottom: 1px solid #222;
+      border-bottom: 1px solid #c4d8ea;
       padding: 14px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
     }
-    #header-title { font-size: 1.1rem; font-weight: 600; letter-spacing: 0.04em; }
-    #header-meta { color: #888; font-size: 0.85rem; flex: 1; text-align: center; }
+    #header-title { font-size: 1.1rem; font-weight: 600; letter-spacing: 0.04em; color: #1a2d3f; }
+    #header-meta { color: #6b8faa; font-size: 0.85rem; flex: 1; text-align: center; }
     #btn-signout {
       background: none;
-      border: 1px solid #444;
-      color: #aaa;
+      border: 1px solid #b0cce0;
+      color: #6b8faa;
       border-radius: 4px;
       padding: 6px 14px;
       font-size: 0.8rem;
@@ -84,58 +84,106 @@
       transition: border-color 0.15s, color 0.15s;
       white-space: nowrap;
     }
-    #btn-signout:hover { border-color: #fff; color: #fff; }
+    #btn-signout:hover { border-color: #3a7abd; color: #1a2d3f; }
 
     /* === Error banner === */
     #error-banner {
-      background: #3d1a1a;
-      border-bottom: 1px solid #7f2020;
-      color: #ffaaaa;
+      background: #fde8e8;
+      border-bottom: 1px solid #f0b8b8;
+      color: #a02020;
       padding: 12px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       font-size: 0.9rem;
     }
-    #error-banner a { color: #ff8888; cursor: pointer; text-decoration: underline; }
+    #error-banner a { color: #c0392b; cursor: pointer; text-decoration: underline; }
 
     /* === Timeline === */
     #timeline-screen {
       max-width: 1400px;
       margin: 0 auto;
-      padding: 32px 24px 80px;
+      padding: 32px 24px 80px 160px;
+      position: relative;
     }
-    .month-bucket { margin-bottom: 48px; }
+    /* Vertical rail line */
+    #timeline-screen::before {
+      content: '';
+      position: absolute;
+      left: 80px;
+      top: 32px;
+      bottom: 80px;
+      width: 1px;
+      background: linear-gradient(to bottom, transparent, #b4cfe4 32px, #b4cfe4 calc(100% - 32px), transparent);
+      pointer-events: none;
+    }
+    .month-bucket {
+      position: relative;
+      margin-bottom: 36px;
+    }
+    /* Dot on the rail */
+    .month-bucket::before {
+      content: '';
+      position: absolute;
+      left: -84px;
+      top: 8px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #e8f2fb;
+      border: 1.5px solid #3a7abd;
+    }
+    /* Connector from dot to content */
+    .month-bucket::after {
+      content: '';
+      position: absolute;
+      left: -76px;
+      top: 11px;
+      width: 72px;
+      height: 1px;
+      background: #c4d8ea;
+    }
     .month-header {
       display: flex;
       align-items: baseline;
-      justify-content: space-between;
-      margin-bottom: 16px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid #222;
+      gap: 12px;
+      margin-bottom: 12px;
     }
-    .month-label { font-size: 1.4rem; font-weight: 600; }
-    .month-count { color: #666; font-size: 0.9rem; }
+    .month-label { font-size: 1.1rem; font-weight: 600; letter-spacing: 0.02em; color: #1a2d3f; }
+    .month-count { color: #8aacbf; font-size: 0.8rem; }
+    /* Year label in the left gutter */
+    .year-marker {
+      position: absolute;
+      left: -150px;
+      top: 2px;
+      width: 56px;
+      text-align: right;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #3a7abd;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
 
     /* === Masonry grid === */
     .photo-grid {
-      columns: 3;
-      column-gap: 8px;
+      columns: 6;
+      column-gap: 5px;
     }
     .photo-item {
       break-inside: avoid;
-      margin-bottom: 8px;
+      margin-bottom: 5px;
       cursor: pointer;
       overflow: hidden;
       border-radius: 4px;
-      background: #1a1a1a;
+      background: #c4d8ea;
     }
     .photo-item img {
       width: 100%;
       display: block;
       transition: filter 0.15s;
     }
-    .photo-item:hover img { filter: brightness(1.15); }
+    .photo-item:hover img { filter: brightness(1.08); }
     .photo-item img.lazy { opacity: 0; transition: opacity 0.3s, filter 0.15s; }
     .photo-item img.loaded { opacity: 1; }
 
@@ -143,7 +191,7 @@
     #empty-state {
       text-align: center;
       padding: 80px 24px;
-      color: #555;
+      color: #6b8faa;
     }
     #empty-state h2 { font-size: 1.4rem; font-weight: 400; margin-bottom: 8px; }
 
@@ -151,8 +199,24 @@
     #sentinel { height: 1px; }
 
     /* === Responsive === */
-    @media (max-width: 768px) { .photo-grid { columns: 2; } }
-    @media (max-width: 480px) { .photo-grid { columns: 1; } #header-meta { display: none; } }
+    @media (max-width: 1024px) { .photo-grid { columns: 4; } }
+    @media (max-width: 768px) {
+      .photo-grid { columns: 3; }
+      #timeline-screen { padding-left: 80px; }
+      #timeline-screen::before { left: 24px; }
+      .month-bucket::before { left: -36px; }
+      .month-bucket::after { left: -28px; width: 24px; }
+      .year-marker { left: -72px; width: 44px; font-size: 0.6rem; }
+    }
+    @media (max-width: 480px) {
+      .photo-grid { columns: 2; }
+      #header-meta { display: none; }
+      #timeline-screen { padding-left: 56px; }
+      #timeline-screen::before { left: 16px; }
+      .month-bucket::before { left: -28px; }
+      .month-bucket::after { left: -20px; width: 16px; }
+      .year-marker { display: none; }
+    }
 
     /* === Lightbox === */
     #lightbox {
@@ -236,8 +300,8 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
     const CONFIG = {
-      CLIENT_ID: 'YOUR_GOOGLE_OAUTH_CLIENT_ID',
-      FOLDER_ID: 'YOUR_DRIVE_FOLDER_ID',
+      CLIENT_ID: '815089123525-25qcg5ujrcug81e7ffi3f834ogqt3e2p.apps.googleusercontent.com',
+      FOLDER_ID: '1MxTtKM4mZOzrWTz-x6dHgiEPV6efxrCR',
       SCOPES: 'https://www.googleapis.com/auth/drive.readonly'
     };
 
@@ -257,8 +321,8 @@
       if (!state.token) {
         app.innerHTML = `
           <div id="login-screen">
-            <h1>Photo Timeline</h1>
-            <p>Sign in to view your photo collection</p>
+            <h1>TonyStory</h1>
+            <p>A little boy growing up, one month at a time</p>
             <button id="btn-signin">
               <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -307,7 +371,7 @@
         </div>` : '';
       return `
         <header id="site-header">
-          <span id="header-title">Photo Timeline</span>
+          <span id="header-title">TonyStory</span>
           <span id="header-meta">${meta}</span>
           <button id="btn-signout">Sign out</button>
         </header>
@@ -365,7 +429,7 @@
         do {
           const params = new URLSearchParams({
             q: `'${CONFIG.FOLDER_ID}' in parents and trashed=false and mimeType contains 'image/'`,
-            fields: 'nextPageToken,files(id,name,mimeType,createdTime,imageMediaMetadata)',
+            fields: 'nextPageToken,files(id,name,mimeType,createdTime,imageMediaMetadata,thumbnailLink)',
             pageSize: '100',
             ...(pageToken ? { pageToken } : {})
           });
@@ -387,8 +451,8 @@
             id: f.id,
             name: f.name,
             date: parsePhotoDate(f),
-            thumbnailUrl: `https://drive.google.com/thumbnail?id=${f.id}&sz=w400`,
-            fullUrl: `https://drive.google.com/uc?id=${f.id}&export=view`
+            thumbnailUrl: f.thumbnailLink ? f.thumbnailLink.replace(/=s\d+/, '=s200') : null,
+            fullUrl: `https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`
           }));
 
           state.photos.push(...photos);
@@ -453,7 +517,10 @@
       return `<div id="months-container"></div><div id="sentinel"></div>`;
     }
 
-    function renderMonthBucket(month) {
+    function renderMonthBucket(month, isYearStart) {
+      const year = month.label.split(' ').pop();
+      const monthName = month.label.split(' ').slice(0, -1).join(' ');
+      const yearMarker = isYearStart ? `<div class="year-marker">${year}</div>` : '';
       const items = month.photos.map((photo, idx) => `
         <div class="photo-item" data-photo-id="${photo.id}" data-month-label="${month.label}" data-month-idx="${idx}">
           <img
@@ -466,8 +533,9 @@
 
       return `
         <div class="month-bucket" data-month="${month.label}">
+          ${yearMarker}
           <div class="month-header">
-            <span class="month-label">${month.label}</span>
+            <span class="month-label">${monthName}</span>
             <span class="month-count">${month.photos.length} photo${month.photos.length !== 1 ? 's' : ''}</span>
           </div>
           <div class="photo-grid">${items}</div>
@@ -483,7 +551,10 @@
       if (!container) return;
       const end = Math.min(state.renderedMonths + MONTHS_PER_BATCH, state.months.length);
       for (let i = state.renderedMonths; i < end; i++) {
-        container.insertAdjacentHTML('beforeend', renderMonthBucket(state.months[i]));
+        const month = state.months[i];
+        const prevYear = i > 0 ? state.months[i - 1].label.split(' ').pop() : null;
+        const isYearStart = i === 0 || month.label.split(' ').pop() !== prevYear;
+        container.insertAdjacentHTML('beforeend', renderMonthBucket(month, isYearStart));
       }
       state.renderedMonths = end;
       attachImageObserver();
@@ -528,7 +599,20 @@
                 img.src = img.dataset.src;
                 img.removeAttribute('data-src');
                 img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
-                img.addEventListener('error', () => {
+                img.addEventListener('error', async () => {
+                  const photoId = img.closest('.photo-item')?.dataset.photoId;
+                  if (photoId) {
+                    try {
+                      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${photoId}?alt=media`, {
+                        headers: { Authorization: `Bearer ${state.token}` }
+                      });
+                      if (res.ok) {
+                        img.src = URL.createObjectURL(await res.blob());
+                        img.classList.add('loaded');
+                        return;
+                      }
+                    } catch {}
+                  }
                   img.classList.add('loaded');
                   img.style.minHeight = '120px';
                   img.style.background = '#1e1e1e';
@@ -541,7 +625,7 @@
       }
 
       document.querySelectorAll('img.lazy[data-src]').forEach(img => {
-        imageObserver.observe(img);
+        if (img.dataset.src) imageObserver.observe(img);
       });
     }
 
@@ -560,13 +644,21 @@
       document.addEventListener('keydown', lightboxKeyHandler);
     }
 
-    function showLightboxPhoto(idx) {
+    async function showLightboxPhoto(idx) {
       const photo = lightboxMonthPhotos[idx];
       if (!photo) return;
       lightboxCurrentIdx = idx;
       const img = document.getElementById('lightbox-img');
-      img.src = photo.fullUrl;
+      img.src = '';
       img.alt = photo.name;
+      try {
+        const res = await fetch(photo.fullUrl, { headers: { Authorization: `Bearer ${state.token}` } });
+        if (!res.ok) throw new Error('load failed');
+        const blob = await res.blob();
+        img.src = URL.createObjectURL(blob);
+      } catch {
+        img.src = photo.thumbnailUrl || '';
+      }
       document.getElementById('lightbox-name').textContent = photo.name;
       document.getElementById('lightbox-date').textContent =
         photo.date.toLocaleString('default', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
