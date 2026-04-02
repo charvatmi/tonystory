@@ -322,6 +322,36 @@
       config: null  // { dob: Date, milestones: Map<string, string> } or null
     };
 
+    // === Czech helpers ===
+
+    function pluralCz(n, one, few, many) {
+      if (n === 1) return `${n} ${one}`;
+      if (n >= 2 && n <= 4) return `${n} ${few}`;
+      return `${n} ${many}`;
+    }
+
+    function pluralCzFotek(n) {
+      return pluralCz(n, 'fotka', 'fotky', 'fotek');
+    }
+
+    function formatAge(dob, today) {
+      const totalDays = Math.floor((today - dob) / 86400000);
+      if (totalDays < 0) return null;
+
+      let years = today.getFullYear() - dob.getFullYear();
+      let months = today.getMonth() - dob.getMonth();
+      if (today.getDate() < dob.getDate()) months--;
+      if (months < 0) { years--; months += 12; }
+
+      if (today.getDate() === dob.getDate() && today.getMonth() === dob.getMonth() && years > 0) {
+        return `Tonymu je dnes ${pluralCz(years, 'rok', 'roky', 'let')}!`;
+      }
+      if (totalDays < 30) return 'Tonymu je méně než měsíc';
+      if (years === 0) return `Tonymu je ${pluralCz(months, 'měsíc', 'měsíce', 'měsíců')}`;
+      if (months === 0) return `Tonymu je ${pluralCz(years, 'rok', 'roky', 'let')}`;
+      return `Tonymu je ${pluralCz(years, 'rok', 'roky', 'let')} a ${pluralCz(months, 'měsíc', 'měsíce', 'měsíců')}`;
+    }
+
     // === Render ===
 
     function render() {
@@ -366,11 +396,16 @@
     function buildHeader() {
       const total = state.photos.length;
       let meta = '';
-      if (total > 0) {
+      if (state.config && state.config.dob) {
+        const ageStr = formatAge(state.config.dob, new Date());
+        if (ageStr) {
+          meta = total > 0 ? `${ageStr} · ${pluralCzFotek(total)}` : ageStr;
+        }
+      } else if (total > 0) {
         const oldest = state.photos[state.photos.length - 1].date;
         const newest = state.photos[0].date;
-        const fmt = d => d.toLocaleString('default', { month: 'short', year: 'numeric' });
-        meta = `${total} photos · ${fmt(oldest)} – ${fmt(newest)}`;
+        const fmt = d => d.toLocaleString('cs-CZ', { month: 'short', year: 'numeric' });
+        meta = `${pluralCzFotek(total)} · ${fmt(oldest)} – ${fmt(newest)}`;
       }
       const banner = state.error ? `
         <div id="error-banner">
@@ -588,7 +623,7 @@
           ${yearMarker}
           <div class="month-header">
             <span class="month-label">${escapeHtml(month.czechMonth)}</span>
-            <span class="month-count">${month.photos.length} photo${month.photos.length !== 1 ? 's' : ''}</span>
+            <span class="month-count">${pluralCzFotek(month.photos.length)}</span>
           </div>
           <div class="photo-grid">${items}</div>
         </div>`;
