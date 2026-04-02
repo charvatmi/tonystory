@@ -400,6 +400,8 @@
         const ageStr = formatAge(state.config.dob, new Date());
         if (ageStr) {
           meta = total > 0 ? `${ageStr} · ${pluralCzFotek(total)}` : ageStr;
+        } else if (total > 0) {
+          meta = pluralCzFotek(total);
         }
       } else if (total > 0) {
         const oldest = state.photos[state.photos.length - 1].date;
