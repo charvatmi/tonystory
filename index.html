@@ -753,14 +753,15 @@
     }
 
     function toggleMonth(label) {
+      const bucket = document.querySelector(`.month-bucket[data-month="${label}"]`);
+      if (!bucket) return;
+      const monthIndex = state.months.findIndex(m => m.label === label);
+      if (monthIndex === -1) return;
       if (state.expandedMonths.has(label)) {
         state.expandedMonths.delete(label);
       } else {
         state.expandedMonths.add(label);
       }
-      const bucket = document.querySelector(`.month-bucket[data-month="${label}"]`);
-      if (!bucket) return;
-      const monthIndex = state.months.findIndex(m => m.label === label);
       const prevYear = monthIndex > 0 ? state.months[monthIndex - 1].year : null;
       const isYearStart = monthIndex === 0 || state.months[monthIndex].year !== prevYear;
       bucket.outerHTML = renderMonthBucket(state.months[monthIndex], isYearStart, monthIndex);
