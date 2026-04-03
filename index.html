@@ -662,6 +662,7 @@
     }
 
     function renderMonthBucket(month, isYearStart, monthIndex) {
+      if (!month.photos.length) return '';
       const yearMarker = isYearStart ? `<div class="year-marker">${month.year}</div>` : '';
 
       // Age label below month name
@@ -686,6 +687,8 @@
       const thumbIdx = state.monthThumbnails.get(month.label);
 
       const isExpanded = state.expandedMonths.has(month.label);
+      // monthIndex === 0 is always the most recent month (state.months is sorted newest-first)
+      // and is always rendered in the first batch, so this is a stable check
       const isMostRecent = monthIndex === 0;
       const chevron = isExpanded ? '▾' : '▸';
 
@@ -707,7 +710,7 @@
           <div class="photo-grid collapsed">
             <div class="photo-item" data-photo-id="${photo.id}" data-month-label="${month.label}" data-month-idx="${thumbIdx}">
               <img
-                src="${photo.thumbnailUrl || ''}"
+                ${photo.thumbnailUrl ? `src="${photo.thumbnailUrl}"` : ''}
                 alt="${escapeHtml(photo.name)}"
                 class="loaded"
               />
