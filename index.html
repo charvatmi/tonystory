@@ -440,6 +440,7 @@
         if (state.months.length > 0) {
           appendNextMonths();
           initSentinelObserver();
+          initMonthClickDelegation();
         }
       }
     }
@@ -749,6 +750,38 @@
       state.renderedMonths = end;
       attachImageObserver();
       attachPhotoClickHandlers();
+    }
+
+    function toggleMonth(label) {
+      if (state.expandedMonths.has(label)) {
+        state.expandedMonths.delete(label);
+      } else {
+        state.expandedMonths.add(label);
+      }
+      const bucket = document.querySelector(`.month-bucket[data-month="${label}"]`);
+      if (!bucket) return;
+      const monthIndex = state.months.findIndex(m => m.label === label);
+      const prevYear = monthIndex > 0 ? state.months[monthIndex - 1].year : null;
+      const isYearStart = monthIndex === 0 || state.months[monthIndex].year !== prevYear;
+      bucket.outerHTML = renderMonthBucket(state.months[monthIndex], isYearStart, monthIndex);
+      if (state.expandedMonths.has(label)) {
+        attachImageObserver();
+        attachPhotoClickHandlers();
+      }
+    }
+
+    function initMonthClickDelegation() {
+      const container = document.getElementById('months-container');
+      if (!container || container.dataset.monthClickAttached) return;
+      container.dataset.monthClickAttached = 'true';
+      container.addEventListener('click', (e) => {
+        const header = e.target.closest('.month-header');
+        if (!header) return;
+        const bucket = header.closest('.month-bucket');
+        if (!bucket) return;
+        const label = bucket.dataset.month;
+        if (label) toggleMonth(label);
+      });
     }
 
     function initSentinelObserver() {
