@@ -510,6 +510,8 @@
       state.photos = [];
       state.months = [];
       state.renderedMonths = 0;
+      state.expandedMonths = new Set();
+      state.monthThumbnails = new Map();
       sessionStorage.removeItem('gd_token');
       render();
     }
