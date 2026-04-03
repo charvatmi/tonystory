@@ -149,6 +149,9 @@
       align-items: baseline;
       gap: 12px;
       margin-bottom: 12px;
+      cursor: pointer;
+      -webkit-user-select: none;
+      user-select: none;
     }
     .month-label { font-size: 1.1rem; font-weight: 600; letter-spacing: 0.02em; color: #1a2d3f; }
     .month-count { color: #8aacbf; font-size: 0.8rem; }
@@ -211,11 +214,6 @@
     .photo-item img.loaded { opacity: 1; }
 
     /* === Collapsible months === */
-    .month-header {
-      cursor: pointer;
-      -webkit-user-select: none;
-      user-select: none;
-    }
     .month-chevron {
       color: #8aacbf;
       font-size: 0.75em;
