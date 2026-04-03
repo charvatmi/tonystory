@@ -661,17 +661,17 @@
       return `<div id="months-container"></div><div id="sentinel"></div>`;
     }
 
-    function renderMonthBucket(month, isYearStart) {
+    function renderMonthBucket(month, isYearStart, monthIndex) {
       const yearMarker = isYearStart ? `<div class="year-marker">${month.year}</div>` : '';
 
-      // Feature 1: age below month label
+      // Age label below month name
       let ageLabel = '';
       if (state.config && state.config.dob) {
         const age = formatMonthAge(month.year, month.month, state.config.dob);
         if (age) ageLabel = `<span class="month-age">${age}</span>`;
       }
 
-      // Feature 5: milestone badge
+      // Milestone badge
       const milestoneText = state.config && state.config.milestones.has(month.label)
         ? state.config.milestones.get(month.label)
         : null;
@@ -679,26 +679,53 @@
         ? `<span class="milestone-badge">${escapeHtml(milestoneText)}</span>`
         : '';
 
-      const items = month.photos.map((photo, idx) => `
-        <div class="photo-item" data-photo-id="${photo.id}" data-month-label="${month.label}" data-month-idx="${idx}">
-          <img
-            class="lazy"
-            data-src="${photo.thumbnailUrl}"
-            alt="${escapeHtml(photo.name)}"
-            loading="lazy"
-          />
-        </div>`).join('');
+      // Pick random thumbnail index once per month
+      if (!state.monthThumbnails.has(month.label)) {
+        state.monthThumbnails.set(month.label, Math.floor(Math.random() * month.photos.length));
+      }
+      const thumbIdx = state.monthThumbnails.get(month.label);
+
+      const isExpanded = state.expandedMonths.has(month.label);
+      const isMostRecent = monthIndex === 0;
+      const chevron = isExpanded ? '▾' : '▸';
+
+      let gridHtml;
+      if (isExpanded) {
+        const items = month.photos.map((photo, idx) => `
+          <div class="photo-item" data-photo-id="${photo.id}" data-month-label="${month.label}" data-month-idx="${idx}">
+            <img
+              class="lazy"
+              data-src="${photo.thumbnailUrl}"
+              alt="${escapeHtml(photo.name)}"
+              loading="lazy"
+            />
+          </div>`).join('');
+        gridHtml = `<div class="photo-grid">${items}</div>`;
+      } else {
+        const photo = month.photos[thumbIdx];
+        gridHtml = `
+          <div class="photo-grid collapsed">
+            <div class="photo-item" data-photo-id="${photo.id}" data-month-label="${month.label}" data-month-idx="${thumbIdx}">
+              <img
+                src="${photo.thumbnailUrl || ''}"
+                alt="${escapeHtml(photo.name)}"
+                class="loaded"
+              />
+            </div>
+          </div>`;
+      }
 
       return `
-        <div class="month-bucket${milestoneText ? ' has-milestone' : ''}" data-month="${month.label}">
+        <div class="month-bucket${milestoneText ? ' has-milestone' : ''}${isMostRecent ? ' current-month' : ''}" data-month="${month.label}">
           ${yearMarker}
           <div class="month-header">
             <span class="month-label">${escapeHtml(month.czechMonth)}</span>
             ${milestoneBadge}
             <span class="month-count">${pluralCzFotek(month.photos.length)}</span>
+            <span class="month-chevron">${chevron}</span>
           </div>
           ${ageLabel}
-          <div class="photo-grid">${items}</div>
+          ${gridHtml}
         </div>`;
     }
 
@@ -714,7 +741,7 @@
         const month = state.months[i];
         const prevYear = i > 0 ? state.months[i - 1].year : null;
         const isYearStart = i === 0 || month.year !== prevYear;
-        container.insertAdjacentHTML('beforeend', renderMonthBucket(month, isYearStart));
+        container.insertAdjacentHTML('beforeend', renderMonthBucket(month, isYearStart, i));
       }
       state.renderedMonths = end;
       attachImageObserver();
