@@ -359,7 +359,9 @@
       renderedMonths: 0,
       loading: false,
       error: null,
-      config: null  // { dob: Date, milestones: Map<string, string> } or null
+      config: null,  // { dob: Date, milestones: Map<string, string> } or null
+      expandedMonths: new Set(),   // month labels currently expanded
+      monthThumbnails: new Map()   // month label → random thumbnail index
     };
 
     // === Czech helpers ===
