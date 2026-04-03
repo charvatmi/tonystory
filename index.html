@@ -210,6 +210,25 @@
     .photo-item img.lazy { opacity: 0; transition: opacity 0.3s, filter 0.15s; }
     .photo-item img.loaded { opacity: 1; }
 
+    /* === Collapsible months === */
+    .month-header {
+      cursor: pointer;
+      user-select: none;
+    }
+    .month-chevron {
+      color: #8aacbf;
+      font-size: 0.75em;
+      margin-left: auto;
+    }
+    .photo-grid.collapsed {
+      columns: 1;
+      max-width: 200px;
+      filter: grayscale(100%);
+    }
+    .month-bucket.current-month .photo-grid.collapsed {
+      filter: none;
+    }
+
     /* === Empty state === */
     #empty-state {
       text-align: center;
